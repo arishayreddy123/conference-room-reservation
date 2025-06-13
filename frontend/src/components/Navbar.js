@@ -1,31 +1,33 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-function Navbar() {
+const Navbar = ({ token, setToken }) => {
   const navigate = useNavigate();
-  const isLoggedIn = !!localStorage.getItem('access');
 
-  const logout = () => {
-    localStorage.removeItem('access');
-    localStorage.removeItem('refresh');
+  const handleLogout = () => {
+    localStorage.clear();
+    setToken('');
     navigate('/login');
   };
 
   return (
-    <nav>
-      <Link to="/">Home</Link> | <Link to="/rooms">Rooms</Link> |{' '}
-      <Link to="/reservations">My Reservations</Link> |{' '}
-      {isLoggedIn ? (
+    <nav style={{ padding: '10px', borderBottom: '1px solid #ccc', marginBottom: '20px' }}>
+      <Link to="/" style={{ marginRight: '15px' }}>Home</Link>
+      <Link to="/rooms" style={{ marginRight: '15px' }}>View Rooms</Link>
+
+      {token ? (
         <>
-          <button onClick={logout}>Logout</button>
+          <Link to="/my-bookings" style={{ marginRight: '15px' }}>My Bookings</Link>
+          <button onClick={handleLogout}>Logout</button>
         </>
       ) : (
         <>
-          <Link to="/login">Login</Link> | <Link to="/register">Register</Link>
+          <Link to="/login" style={{ marginRight: '15px' }}>Login</Link>
+          <Link to="/register" style={{ marginRight: '15px' }}>Register</Link>
         </>
       )}
     </nav>
   );
-}
+};
 
 export default Navbar;

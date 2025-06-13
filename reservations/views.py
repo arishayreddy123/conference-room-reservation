@@ -7,6 +7,7 @@ class ReservationViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        # Admins see all reservations, users only their own
         if self.request.user.is_staff:
             return Reservation.objects.select_related('room', 'user')
         return Reservation.objects.filter(user=self.request.user).select_related('room')

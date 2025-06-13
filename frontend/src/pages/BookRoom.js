@@ -1,85 +1,116 @@
+// src/pages/BookRoom.js
 import React, { useState, useEffect } from 'react';
-import axios from '../api';
-import { useNavigate, useParams } from 'react-router-dom';
+import axios from 'axios';
 
-function BookRoom() {
-  const navigate = useNavigate();
-  const { id: roomIdFromURL } = useParams();
+const timeSlots = ["8-10", "10-12", "12-2", "2-4", "4-6"];
 
+function BookRoom({ token }) {
   const [rooms, setRooms] = useState([]);
-  const [form, setForm] = useState({
-    room: '',
-    date: '',
-    start_time: '',
-    end_time: '',
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split("T")[0];
   });
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [bookings, setBookings] = useState({});
 
   useEffect(() => {
-    axios.get('/rooms/')
-      .then((res) => {
-        setRooms(res.data);
-        if (roomIdFromURL) {
-          setForm(prev => ({ ...prev, room: roomIdFromURL }));
-        }
-      })
-      .catch(() => setError('Could not load rooms.'));
-  }, [roomIdFromURL]);
+    fetchRooms();
+  }, []);
 
-  const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
+  useEffect(() => {
+    if (selectedDate) fetchBookings();
+  }, [selectedDate]);
+
+  const fetchRooms = async () => {
+    try {
+      const res = await axios.get("http://127.0.0.1:8000/api/rooms/");
+      setRooms(res.data);
+    } catch (error) {
+      console.error("Error fetching rooms", error);
+    }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-
+  const fetchBookings = async () => {
     try {
-      await axios.post('/reservations/', form);
-      setSuccess('Room booked successfully!');
-      setTimeout(() => navigate('/rooms'), 2000);
-    } catch (err) {
-      const msg = err.response?.data
-        ? Object.entries(err.response.data).map(([k, v]) => `${k}: ${v}`).join(' | ')
-        : 'Unknown error';
-      setError(`Booking failed: ${msg}`);
+      const res = await axios.get(`http://127.0.0.1:8000/api/reservations/?date=${selectedDate}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const bookingsMap = {};
+      res.data.forEach((booking) => {
+        if (!bookingsMap[booking.room]) bookingsMap[booking.room] = {};
+        bookingsMap[booking.room][booking.time_slot] = true;
+      });
+      setBookings(bookingsMap);
+    } catch (error) {
+      console.error("Error fetching bookings", error);
+    }
+  };
+
+  const handleBook = async (roomId, timeSlot) => {
+    try {
+      await axios.post("http://127.0.0.1:8000/api/reservations/", {
+        room: roomId,
+        date: selectedDate,
+        time_slot: timeSlot,
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchBookings(); // Refresh the view
+    } catch (error) {
+      alert("Booking failed. You may already have a booking.");
+      console.error(error);
     }
   };
 
   return (
-    <div>
-      <h2>Book a Conference Room</h2>
+    <div style={{ padding: '20px' }}>
+      <h2>Book a Room</h2>
 
-      <form onSubmit={handleSubmit}>
-        <label>Room</label>
-        <select name="room" value={form.room} onChange={handleChange} required>
-          <option value="">-- Select Room --</option>
+      <label>
+        Select Date:{' '}
+        <input
+          type="date"
+          value={selectedDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
+        />
+      </label>
+
+      <table border="1" cellPadding="10" style={{ marginTop: "20px", borderCollapse: "collapse" }}>
+        <thead>
+          <tr>
+            <th>Room</th>
+            {timeSlots.map((slot) => (
+              <th key={slot}>{slot}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
           {rooms.map((room) => (
-            <option key={room.id} value={room.id}>
-              {room.name} ({room.location})
-            </option>
+            <tr key={room.id}>
+              <td>{room.name}</td>
+              {timeSlots.map((slot) => {
+                const isBooked = bookings[room.id]?.[slot];
+                return (
+                  <td key={slot}>
+                    <button
+                      style={{
+                        backgroundColor: isBooked ? 'red' : 'green',
+                        color: 'white',
+                        border: 'none',
+                        padding: '5px 10px',
+                        cursor: isBooked ? 'not-allowed' : 'pointer',
+                      }}
+                      disabled={isBooked}
+                      onClick={() => handleBook(room.id, slot)}
+                    >
+                      {isBooked ? 'Booked' : 'Book'}
+                    </button>
+                  </td>
+                );
+              })}
+            </tr>
           ))}
-        </select>
-
-        <label>Date</label>
-        <input type="date" name="date" value={form.date} onChange={handleChange} required />
-
-        <label>Start Time</label>
-        <input type="time" name="start_time" value={form.start_time} onChange={handleChange} required />
-
-        <label>End Time</label>
-        <input type="time" name="end_time" value={form.end_time} onChange={handleChange} required />
-
-        <button type="submit">Book</button>
-      </form>
-
-      {success && <p style={{ color: 'green' }}>{success}</p>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+        </tbody>
+      </table>
     </div>
   );
 }
