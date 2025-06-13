@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 function BookRoom() {
   const navigate = useNavigate();
+  const { id: roomIdFromURL } = useParams();
+
   const [rooms, setRooms] = useState([]);
   const [form, setForm] = useState({
     room: '',
@@ -16,9 +18,14 @@ function BookRoom() {
 
   useEffect(() => {
     axios.get('/rooms/')
-      .then((res) => setRooms(res.data))
+      .then((res) => {
+        setRooms(res.data);
+        if (roomIdFromURL) {
+          setForm(prev => ({ ...prev, room: roomIdFromURL }));
+        }
+      })
       .catch(() => setError('Could not load rooms.'));
-  }, []);
+  }, [roomIdFromURL]);
 
   const handleChange = (e) => {
     setForm({
@@ -37,10 +44,8 @@ function BookRoom() {
       setSuccess('Room booked successfully!');
       setTimeout(() => navigate('/rooms'), 2000);
     } catch (err) {
-      console.error('Booking error:', err.response?.data);
-      const details = err.response?.data;
-      const msg = details
-        ? Object.entries(details).map(([k, v]) => `${k}: ${v}`).join(' | ')
+      const msg = err.response?.data
+        ? Object.entries(err.response.data).map(([k, v]) => `${k}: ${v}`).join(' | ')
         : 'Unknown error';
       setError(`Booking failed: ${msg}`);
     }
@@ -52,7 +57,7 @@ function BookRoom() {
 
       <form onSubmit={handleSubmit}>
         <label>Room</label>
-        <select name="room" onChange={handleChange} required>
+        <select name="room" value={form.room} onChange={handleChange} required>
           <option value="">-- Select Room --</option>
           {rooms.map((room) => (
             <option key={room.id} value={room.id}>

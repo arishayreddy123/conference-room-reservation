@@ -1,19 +1,16 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from '../api';
 
 function Rooms() {
   const [rooms, setRooms] = useState([]);
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   useEffect(() => {
     axios.get('/rooms/')
-      .then((res) => {
-        setRooms(res.data);
-      })
-      .catch((err) => {
-        console.error(err);
-        setError('Failed to load conference rooms.');
-      });
+      .then((res) => setRooms(res.data))
+      .catch(() => setError('Failed to load conference rooms.'));
   }, []);
 
   return (
@@ -37,6 +34,9 @@ function Rooms() {
               <h3>{room.name}</h3>
               <p><strong>Location:</strong> {room.location}</p>
               <p><strong>Capacity:</strong> {room.capacity}</p>
+              <button onClick={() => navigate(`/book/${room.id}`)}>
+                Book This Room
+              </button>
             </div>
           ))}
         </div>
