@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from '../api';
+import { useNavigate } from 'react-router-dom';
 
 function Rooms() {
   const [rooms, setRooms] = useState([]);
@@ -9,26 +9,27 @@ function Rooms() {
 
   useEffect(() => {
     axios.get('/rooms/')
-      .then((res) => setRooms(res.data))
-      .catch(() => setError('Failed to load conference rooms.'));
+      .then(res => setRooms(res.data))
+      .catch(() => setError('Could not load conference rooms.'));
   }, []);
 
   return (
-    <div>
+    <div style={{ padding: '20px' }}>
       <h2>Available Conference Rooms</h2>
       {error && <p style={{ color: 'red' }}>{error}</p>}
+
       {rooms.length === 0 ? (
         <p>No rooms available.</p>
       ) : (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-          {rooms.map((room) => (
+          {rooms.map(room => (
             <div
               key={room.id}
               style={{
                 border: '1px solid #ccc',
-                padding: '1rem',
                 borderRadius: '8px',
-                width: '250px',
+                padding: '1rem',
+                width: '280px',
               }}
             >
               <h3>{room.name}</h3>
