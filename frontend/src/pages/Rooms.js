@@ -1,18 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import axios from '../api';
-import BookingForm from '../components/BookingForm';
 
 function Rooms() {
   const [rooms, setRooms] = useState([]);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    axios
-      .get('/rooms/')
-      .then((res) => setRooms(res.data))
+    axios.get('/rooms/')
+      .then((res) => {
+        setRooms(res.data);
+      })
       .catch((err) => {
         console.error(err);
-        setError('Could not load rooms.');
+        setError('Failed to load conference rooms.');
       });
   }, []);
 
@@ -20,16 +20,27 @@ function Rooms() {
     <div>
       <h2>Available Conference Rooms</h2>
       {error && <p style={{ color: 'red' }}>{error}</p>}
-      <ul>
-        {rooms.map((room) => (
-          <li key={room.id} style={{ marginBottom: '20px' }}>
-            <strong>{room.name}</strong> — {room.location} | Capacity: {room.capacity}
-            <br />
-            <small>{room.description}</small>
-            <BookingForm roomId={room.id} />
-          </li>
-        ))}
-      </ul>
+      {rooms.length === 0 ? (
+        <p>No rooms available.</p>
+      ) : (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+          {rooms.map((room) => (
+            <div
+              key={room.id}
+              style={{
+                border: '1px solid #ccc',
+                padding: '1rem',
+                borderRadius: '8px',
+                width: '250px',
+              }}
+            >
+              <h3>{room.name}</h3>
+              <p><strong>Location:</strong> {room.location}</p>
+              <p><strong>Capacity:</strong> {room.capacity}</p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
