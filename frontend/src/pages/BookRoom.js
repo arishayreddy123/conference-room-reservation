@@ -1,16 +1,19 @@
-// src/pages/BookRoom.js
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import Navbar from "../components/Navbar";
 
-const timeSlots = ["8-10", "10-12", "12-2", "2-4", "4-6"];
+const timeSlots = [
+  "08:00", "09:00", "10:00", "11:00", "12:00",
+  "13:00", "14:00", "15:00", "16:00", "17:00"
+];
 
-function BookRoom({ token }) {
+function BookRoom({ token, setToken }) {
   const [rooms, setRooms] = useState([]);
+  const [bookings, setBookings] = useState({});
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date();
     return today.toISOString().split("T")[0];
   });
-  const [bookings, setBookings] = useState({});
 
   useEffect(() => {
     fetchRooms();
@@ -24,94 +27,117 @@ function BookRoom({ token }) {
     try {
       const res = await axios.get("http://127.0.0.1:8000/api/rooms/");
       setRooms(res.data);
-    } catch (error) {
-      console.error("Error fetching rooms", error);
+    } catch (err) {
+      console.error("Error fetching rooms", err);
     }
   };
 
   const fetchBookings = async () => {
     try {
       const res = await axios.get(`http://127.0.0.1:8000/api/reservations/?date=${selectedDate}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-      const bookingsMap = {};
+      const map = {};
       res.data.forEach((booking) => {
-        if (!bookingsMap[booking.room]) bookingsMap[booking.room] = {};
-        bookingsMap[booking.room][booking.time_slot] = true;
+        if (!map[booking.room]) map[booking.room] = {};
+        map[booking.room][booking.time_slot] = true;
       });
-      setBookings(bookingsMap);
-    } catch (error) {
-      console.error("Error fetching bookings", error);
+      setBookings(map);
+    } catch (err) {
+      console.error("Error fetching bookings", err);
     }
   };
 
-  const handleBook = async (roomId, timeSlot) => {
+  const handleBooking = async (roomId, slot) => {
     try {
       await axios.post("http://127.0.0.1:8000/api/reservations/", {
         room: roomId,
         date: selectedDate,
-        time_slot: timeSlot,
+        time_slot: slot,
       }, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-      fetchBookings(); // Refresh the view
-    } catch (error) {
-      alert("Booking failed. You may already have a booking.");
-      console.error(error);
+      fetchBookings();
+    } catch (err) {
+      alert("Booking failed. You may already have a booking at this time.");
     }
   };
 
+  const formattedDate = new Date(selectedDate).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
   return (
-    <div style={{ padding: '20px' }}>
-      <h2>Book a Room</h2>
+    <>
+      <Navbar token={token} setToken={setToken} />
+      <div style={{ padding: "30px" }}>
+        <h2>Availability for {formattedDate}</h2>
+        <label>
+          <strong>Select Date:</strong>{" "}
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+          />
+        </label>
 
-      <label>
-        Select Date:{' '}
-        <input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-        />
-      </label>
-
-      <table border="1" cellPadding="10" style={{ marginTop: "20px", borderCollapse: "collapse" }}>
-        <thead>
-          <tr>
-            <th>Room</th>
-            {timeSlots.map((slot) => (
-              <th key={slot}>{slot}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
+        <div style={{ marginTop: "20px" }}>
           {rooms.map((room) => (
-            <tr key={room.id}>
-              <td>{room.name}</td>
-              {timeSlots.map((slot) => {
-                const isBooked = bookings[room.id]?.[slot];
-                return (
-                  <td key={slot}>
+            <div
+              key={room.id}
+              style={{
+                padding: "15px",
+                marginBottom: "20px",
+                borderBottom: "1px solid #ccc",
+              }}
+            >
+              <h3 style={{ margin: 0 }}>{room.name}</h3>
+              <p style={{ margin: "4px 0" }}>Capacity: {room.capacity}</p>
+              <p style={{ margin: "4px 0", color: "gray" }}>{room.location}</p>
+
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                {timeSlots.map((slot) => {
+                  const isBooked = bookings[room.id]?.[slot];
+                  return isBooked ? (
                     <button
+                      key={slot}
+                      disabled
                       style={{
-                        backgroundColor: isBooked ? 'red' : 'green',
-                        color: 'white',
-                        border: 'none',
-                        padding: '5px 10px',
-                        cursor: isBooked ? 'not-allowed' : 'pointer',
+                        backgroundColor: "#f88",
+                        color: "white",
+                        border: "none",
+                        padding: "10px 14px",
+                        borderRadius: "6px",
+                        cursor: "not-allowed",
                       }}
-                      disabled={isBooked}
-                      onClick={() => handleBook(room.id, slot)}
                     >
-                      {isBooked ? 'Booked' : 'Book'}
+                      {slot}
                     </button>
-                  </td>
-                );
-              })}
-            </tr>
+                  ) : (
+                    <button
+                      key={slot}
+                      onClick={() => handleBooking(room.id, slot)}
+                      style={{
+                        backgroundColor: "#4CAF50",
+                        color: "white",
+                        border: "none",
+                        padding: "10px 14px",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {slot}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </div>
+      </div>
+    </>
   );
 }
 
